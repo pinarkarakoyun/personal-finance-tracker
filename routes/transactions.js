@@ -97,4 +97,32 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.delete('/:id', async (req, res) => {
+  const id = Number(req.params.id);
+
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ message: 'id must be an integer' });
+  }
+
+  try {
+    const pool = await getPool();
+    const result = await pool
+      .request()
+      .input('id', sql.Int, id)
+      .input('userId', sql.Int, req.user.userId)
+      .query(
+        'DELETE FROM Transactions WHERE TransactionId = @id AND UserId = @userId'
+      );
+
+    if (result.rowsAffected[0] === 0) {
+      return res.status(404).json({ message: 'Transaction not found' });
+    }
+
+    res.sendStatus(204);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;
