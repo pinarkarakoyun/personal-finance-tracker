@@ -6,53 +6,75 @@ const router = express.Router();
 
 router.use(authenticate);
 
-router.post('/', async (req, res) => {
-  const { categoryId, amount, description, date } = req.body;
+// Validates and cleans the body shared by POST and PUT.
+// Returns { error } or { value }.
+function parseTransactionBody(body = {}) {
+  const { categoryId, amount, description, date } = body;
+
+  if (!Number.isInteger(categoryId)) {
+    return { error: 'categoryId must be an integer' };
+  }
 
   const amountNum = Number(amount);
-  if (!Number.isInteger(categoryId)) {
-    return res.status(400).json({ message: 'categoryId must be an integer' });
-  }
   if (!Number.isFinite(amountNum) || amountNum <= 0 || amountNum >= 1e10) {
-    return res.status(400).json({ message: 'amount must be a positive number' });
+    return { error: 'amount must be a positive number' };
   }
 
   const desc = typeof description === 'string' ? description.trim() : null;
   if (desc && desc.length > 255) {
-    return res
-      .status(400)
-      .json({ message: 'description must be at most 255 characters' });
+    return { error: 'description must be at most 255 characters' };
   }
 
   if (
     date !== undefined &&
+    date !== null &&
     (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(Date.parse(date)))
   ) {
-    return res.status(400).json({ message: 'date must be in YYYY-MM-DD format' });
+    return { error: 'date must be in YYYY-MM-DD format' };
+  }
+
+  return {
+    value: {
+      categoryId,
+      amount: amountNum,
+      description: desc || null,
+      date: date || null,
+    },
+  };
+}
+
+// True only if the category exists AND belongs to this user.
+async function categoryBelongsToUser(pool, categoryId, userId) {
+  const result = await pool
+    .request()
+    .input('categoryId', sql.Int, categoryId)
+    .input('userId', sql.Int, userId)
+    .query(
+      'SELECT CategoryId FROM Categories WHERE CategoryId = @categoryId AND UserId = @userId'
+    );
+  return result.recordset.length > 0;
+}
+
+router.post('/', async (req, res) => {
+  const { error, value } = parseTransactionBody(req.body);
+  if (error) {
+    return res.status(400).json({ message: error });
   }
 
   try {
     const pool = await getPool();
 
-    const category = await pool
-      .request()
-      .input('categoryId', sql.Int, categoryId)
-      .input('userId', sql.Int, req.user.userId)
-      .query(
-        'SELECT CategoryId FROM Categories WHERE CategoryId = @categoryId AND UserId = @userId'
-      );
-
-    if (category.recordset.length === 0) {
+    if (!(await categoryBelongsToUser(pool, value.categoryId, req.user.userId))) {
       return res.status(404).json({ message: 'Category not found' });
     }
 
     const result = await pool
       .request()
       .input('userId', sql.Int, req.user.userId)
-      .input('categoryId', sql.Int, categoryId)
-      .input('amount', sql.Decimal(12, 2), amountNum)
-      .input('description', sql.NVarChar(255), desc || null)
-      .input('date', sql.VarChar(10), date || null)
+      .input('categoryId', sql.Int, value.categoryId)
+      .input('amount', sql.Decimal(12, 2), value.amount)
+      .input('description', sql.NVarChar(255), value.description)
+      .input('date', sql.VarChar(10), value.date)
       .query(`
         INSERT INTO Transactions (UserId, CategoryId, Amount, Description, TransactionDate)
         OUTPUT INSERTED.TransactionId,
@@ -91,6 +113,57 @@ router.get('/', async (req, res) => {
         ORDER BY t.TransactionDate DESC, t.TransactionId DESC
       `);
     res.json(result.recordset);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ message: 'id must be an integer' });
+  }
+
+  const { error, value } = parseTransactionBody(req.body);
+  if (error) {
+    return res.status(400).json({ message: error });
+  }
+
+  try {
+    const pool = await getPool();
+
+    if (!(await categoryBelongsToUser(pool, value.categoryId, req.user.userId))) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    const result = await pool
+      .request()
+      .input('id', sql.Int, id)
+      .input('userId', sql.Int, req.user.userId)
+      .input('categoryId', sql.Int, value.categoryId)
+      .input('amount', sql.Decimal(12, 2), value.amount)
+      .input('description', sql.NVarChar(255), value.description)
+      .input('date', sql.VarChar(10), value.date)
+      .query(`
+        UPDATE Transactions
+        SET CategoryId = @categoryId,
+            Amount = @amount,
+            Description = @description,
+            TransactionDate = ISNULL(CAST(@date AS DATE), TransactionDate)
+        OUTPUT INSERTED.TransactionId,
+               INSERTED.CategoryId,
+               INSERTED.Amount,
+               INSERTED.Description,
+               CONVERT(VARCHAR(10), INSERTED.TransactionDate, 23) AS TransactionDate
+        WHERE TransactionId = @id AND UserId = @userId
+      `);
+
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ message: 'Transaction not found' });
+    }
+
+    res.json(result.recordset[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
