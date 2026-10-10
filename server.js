@@ -5,12 +5,14 @@ const cors = require('cors');
 const { getPool } = require('./db');
 const authRoutes = require('./routes/auth'); 
 const authenticate = require('./middleware/auth');
+const categoryRoutes = require('./routes/categories');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 app.use('/api/auth', authRoutes); 
+app.use('/api/categories', categoryRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
