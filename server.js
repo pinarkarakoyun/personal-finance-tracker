@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const { getPool } = require('./db');
 const authRoutes = require('./routes/auth'); 
+const authenticate = require('./middleware/auth');
 
 const app = express();
 
@@ -13,6 +14,10 @@ app.use('/api/auth', authRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+app.get('/api/me', authenticate, (req, res) => {
+  res.json({ userId: req.user.userId });
 });
 
 app.get('/api/db-test', async (req, res) => {
