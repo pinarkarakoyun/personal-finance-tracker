@@ -119,6 +119,71 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/transactions/summary?year=2026&month=10
+// Returns income/expense totals and a per-category breakdown for one month.
+router.get('/summary', async (req, res) => {
+  const now = new Date();
+  const year = req.query.year === undefined ? now.getFullYear() : Number(req.query.year);
+  const month = req.query.month === undefined ? now.getMonth() + 1 : Number(req.query.month);
+
+  if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+    return res.status(400).json({ message: 'year must be an integer between 2000 and 2100' });
+  }
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    return res.status(400).json({ message: 'month must be an integer between 1 and 12' });
+  }
+
+  try {
+    const pool = await getPool();
+    const result = await pool
+      .request()
+      .input('userId', sql.Int, req.user.userId)
+      .input('year', sql.Int, year)
+      .input('month', sql.Int, month)
+      .query(`
+        DECLARE @start DATE = DATEFROMPARTS(@year, @month, 1);
+        DECLARE @end   DATE = DATEADD(MONTH, 1, @start);
+
+        SELECT c.CategoryId,
+               c.Name,
+               c.Type,
+               SUM(t.Amount) AS Total
+        FROM Transactions t
+        JOIN Categories c ON c.CategoryId = t.CategoryId
+        WHERE t.UserId = @userId
+          AND t.TransactionDate >= @start
+          AND t.TransactionDate <  @end
+        GROUP BY c.CategoryId, c.Name, c.Type
+        ORDER BY Total DESC
+      `);
+
+    const rows = result.recordset;
+    const sumByType = (type) =>
+      rows.filter((r) => r.Type === type).reduce((sum, r) => sum + r.Total, 0);
+
+    const round2 = (n) => Math.round(n * 100) / 100;
+    const totalIncome = round2(sumByType('Income'));
+    const totalExpense = round2(sumByType('Expense'));
+
+    res.json({
+      year,
+      month,
+      totalIncome,
+      totalExpense,
+      balance: round2(totalIncome - totalExpense),
+      byCategory: rows.map((r) => ({
+        categoryId: r.CategoryId,
+        name: r.Name,
+        type: r.Type,
+        total: r.Total,
+      })),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 router.put('/:id', async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) {
