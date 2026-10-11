@@ -51,3 +51,63 @@ button:hover {
 #auth-message {
   color: #c0392b;
 }
+
+select {
+  padding: 10px;
+  font-size: 1rem;
+  border-radius: 6px;
+  border: 1px solid #cbd2d9;
+  background: #ffffff;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#app-message {
+  color: #c0392b;
+}
+
+#transaction-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tx {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  background: #ffffff;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.tx small {
+  color: #7b8794;
+}
+
+.income {
+  color: #1e8e3e;
+  font-weight: 600;
+}
+
+.expense {
+  color: #c0392b;
+  font-weight: 600;
+}
+
+.delete-btn {
+  background: #ffffff;
+  color: #c0392b;
+  border: 1px solid #c0392b;
+  padding: 6px 10px;
+}
+
+.delete-btn:hover {
+  background: #fdecea;
+}

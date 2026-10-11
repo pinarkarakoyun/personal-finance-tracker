@@ -30,8 +30,34 @@
     </section>
 
     <section id="app-section" hidden>
-      <p>Hoş geldin, <strong id="user-name"></strong></p>
-      <button id="logout-button" type="button">Çıkış</button>
+      <div class="topbar">
+        <p>Hoş geldin, <strong id="user-name"></strong></p>
+        <button id="logout-button" type="button">Çıkış</button>
+      </div>
+
+      <p id="app-message" class="error"></p>
+
+      <form id="category-form">
+        <h2>Kategori ekle</h2>
+        <input type="text" id="category-name" placeholder="Kategori adı (örn. Market)" maxlength="50" required>
+        <select id="category-type" required>
+          <option value="Expense">Gider</option>
+          <option value="Income">Gelir</option>
+        </select>
+        <button type="submit">Kategori ekle</button>
+      </form>
+
+      <form id="transaction-form">
+        <h2>İşlem ekle</h2>
+        <select id="transaction-category" required></select>
+        <input type="number" id="transaction-amount" placeholder="Tutar" min="0.01" step="0.01" required>
+        <input type="text" id="transaction-description" placeholder="Açıklama (isteğe bağlı)" maxlength="255">
+        <input type="date" id="transaction-date" required>
+        <button type="submit">İşlem ekle</button>
+      </form>
+
+      <h2>İşlemler</h2>
+      <ul id="transaction-list"></ul>
     </section>
   </main>
 
