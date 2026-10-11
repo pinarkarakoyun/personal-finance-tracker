@@ -28,6 +28,12 @@ const chartColors = [
 ];
 
 let expenseChart = null;
+const transactionForm = document.getElementById('transaction-form');
+const transactionTitle = document.getElementById('transaction-form-title');
+const transactionSubmit = document.getElementById('transaction-submit');
+const transactionCancel = document.getElementById('transaction-cancel');
+
+let editingId = null;
 const cssVar = (name) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
@@ -37,6 +43,29 @@ function todayLocal() {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${d.getFullYear()}-${month}-${day}`;
+}
+
+function startEdit(tx) {
+  editingId = tx.TransactionId;
+  categorySelect.value = String(tx.CategoryId);
+  document.getElementById('transaction-amount').value = tx.Amount;
+  document.getElementById('transaction-description').value = tx.Description || '';
+  dateInput.value = tx.TransactionDate;
+
+  transactionTitle.textContent = 'İşlemi düzenle';
+  transactionSubmit.textContent = 'Güncelle';
+  transactionCancel.hidden = false;
+  transactionForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function resetTransactionForm() {
+  editingId = null;
+  transactionForm.reset();
+  dateInput.value = todayLocal();
+
+  transactionTitle.textContent = 'İşlem ekle';
+  transactionSubmit.textContent = 'İşlem ekle';
+  transactionCancel.hidden = true;
 }
 
 function getToken() {
@@ -77,9 +106,10 @@ function showAuth() {
 }
 
 function logout() {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-  showAuth();
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    resetTransactionForm();
+    showAuth();
 }
 
 async function loadData() {
@@ -206,13 +236,26 @@ function renderTransactions(transactions) {
       }
       try {
         await api(`/transactions/${tx.TransactionId}`, { method: 'DELETE' });
+        if (editingId === tx.TransactionId) {
+          resetTransactionForm();
+        }
         await loadData();
       } catch (err) {
         appMessage.textContent = err.message;
       }
     });
 
-    li.append(info, amount, deleteButton);
+    const editButton = document.createElement('button');
+    editButton.type = 'button';
+    editButton.className = 'edit-btn';
+    editButton.textContent = 'Düzenle';
+    editButton.addEventListener('click', () => startEdit(tx));
+
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    actions.append(editButton, deleteButton);
+
+    li.append(info, amount, actions);
     transactionList.append(li);
   }
 }
@@ -277,27 +320,37 @@ document.getElementById('category-form').addEventListener('submit', async (event
   }
 });
 
-document.getElementById('transaction-form').addEventListener('submit', async (event) => {
+transactionForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   appMessage.textContent = '';
 
+  const payload = {
+    categoryId: Number(categorySelect.value),
+    amount: Number(document.getElementById('transaction-amount').value),
+    description: document.getElementById('transaction-description').value,
+    date: dateInput.value,
+  };
+
   try {
-    await api('/transactions', {
-      method: 'POST',
-      body: JSON.stringify({
-        categoryId: Number(categorySelect.value),
-        amount: Number(document.getElementById('transaction-amount').value),
-        description: document.getElementById('transaction-description').value,
-        date: dateInput.value,
-      }),
-    });
-    event.target.reset();
-    dateInput.value = todayLocal();
+    if (editingId === null) {
+      await api('/transactions', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    } else {
+      await api(`/transactions/${editingId}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+    }
+    resetTransactionForm();
     await loadData();
   } catch (err) {
     appMessage.textContent = err.message;
   }
 });
+
+transactionCancel.addEventListener('click', resetTransactionForm);
 
 summaryMonth.addEventListener('change', async () => {
   appMessage.textContent = '';

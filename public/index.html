@@ -60,14 +60,15 @@
         <button type="submit">Kategori ekle</button>
       </form>
 
-      <form id="transaction-form">
-        <h2>İşlem ekle</h2>
+    <form id="transaction-form">
+        <h2 id="transaction-form-title">İşlem ekle</h2>
         <select id="transaction-category" required></select>
         <input type="number" id="transaction-amount" placeholder="Tutar" min="0.01" step="0.01" required>
         <input type="text" id="transaction-description" placeholder="Açıklama (isteğe bağlı)" maxlength="255">
         <input type="date" id="transaction-date" required>
-        <button type="submit">İşlem ekle</button>
-      </form>
+        <button type="submit" id="transaction-submit">İşlem ekle</button>
+        <button type="button" id="transaction-cancel" class="secondary" hidden>Vazgeç</button>
+    </form>
 
       <h2>İşlemler</h2>
       <ul id="transaction-list"></ul>

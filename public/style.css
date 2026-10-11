@@ -294,3 +294,30 @@ button:hover {
     grid-template-columns: 1fr;
   }
 }
+
+.actions {
+  display: flex;
+  gap: 6px;
+}
+
+.edit-btn {
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  padding: 6px 10px;
+  font-weight: 500;
+}
+
+.edit-btn:hover {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+button.secondary:hover {
+  background: var(--border);
+}
