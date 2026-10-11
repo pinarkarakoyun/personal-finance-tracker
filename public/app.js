@@ -28,6 +28,8 @@ const chartColors = [
 ];
 
 let expenseChart = null;
+const cssVar = (name) =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
 // Today's date in the user's LOCAL time zone, as YYYY-MM-DD.
 function todayLocal() {
@@ -124,7 +126,7 @@ async function loadSummary() {
     appMessage.textContent = 'Grafik kütüphanesi yüklenemedi (internet bağlantını kontrol et).';
     return;
   }
-
+Chart.defaults.color = cssVar('--muted');
   expenseChart = new Chart(chartCanvas, {
     type: 'doughnut',
     data: {
@@ -132,7 +134,8 @@ async function loadSummary() {
       datasets: [
         {
           data: expenses.map((row) => row.total),
-          backgroundColor: expenses.map((_, i) => chartColors[i % chartColors.length]),
+          backgroundColor: expenses.map((_, i) => chartColors[i % chartColors.length]), 
+          borderColor: cssVar('--surface'),
         },
       ],
     },
