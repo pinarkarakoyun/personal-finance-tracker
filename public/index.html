@@ -36,6 +36,19 @@
       </div>
 
       <p id="app-message" class="error"></p>
+        <div id="summary">
+            <div class="summary-header">
+                <h2>Aylık özet</h2>
+                <input type="month" id="summary-month" required>
+            </div>
+            <div class="cards">
+                <div class="card"><small>Gelir</small><strong id="sum-income" class="income">-</strong></div>
+                <div class="card"><small>Gider</small><strong id="sum-expense" class="expense">-</strong></div>
+                <div class="card"><small>Kalan</small><strong id="sum-balance">-</strong></div>
+            </div>
+            <div id="chart-box" class="chart-box"><canvas id="expense-chart"></canvas></div>
+            <p id="chart-empty" hidden>Bu ay için gider kaydı yok.</p>
+        </div>
 
       <form id="category-form">
         <h2>Kategori ekle</h2>
@@ -60,6 +73,9 @@
       <ul id="transaction-list"></ul>
     </section>
   </main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.js"></script>
+<script src="app.js"></script>
 
   <script src="app.js"></script>
 </body>

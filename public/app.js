@@ -9,11 +9,25 @@ const categorySelect = document.getElementById('transaction-category');
 const transactionList = document.getElementById('transaction-list');
 const dateInput = document.getElementById('transaction-date');
 
+const summaryMonth = document.getElementById('summary-month');
+const sumIncome = document.getElementById('sum-income');
+const sumExpense = document.getElementById('sum-expense');
+const sumBalance = document.getElementById('sum-balance');
+const chartBox = document.getElementById('chart-box');
+const chartEmpty = document.getElementById('chart-empty');
+const chartCanvas = document.getElementById('expense-chart');
+
 const money = new Intl.NumberFormat('tr-TR', {
   style: 'currency',
   currency: 'TRY',
 });
 const typeLabel = { Income: 'Gelir', Expense: 'Gider' };
+const chartColors = [
+  '#2f6fed', '#e8590c', '#2f9e44', '#9c36b5', '#f08c00',
+  '#0c8599', '#c2255c', '#5c7cfa', '#868e96', '#82c91e',
+];
+
+let expenseChart = null;
 
 // Today's date in the user's LOCAL time zone, as YYYY-MM-DD.
 function todayLocal() {
@@ -51,6 +65,7 @@ function showApp(user) {
   authSection.hidden = true;
   appSection.hidden = false;
   dateInput.value = todayLocal();
+  summaryMonth.value = todayLocal().slice(0, 7);
   loadData();
 }
 
@@ -74,9 +89,64 @@ async function loadData() {
     ]);
     renderCategories(categories);
     renderTransactions(transactions);
+    await loadSummary();
   } catch (err) {
     appMessage.textContent = err.message;
   }
+}
+
+async function loadSummary() {
+  const month = summaryMonth.value;
+  if (!month) {
+    return;
+  }
+
+  const summary = await api(`/summary?month=${encodeURIComponent(month)}`);
+
+  sumIncome.textContent = money.format(summary.totalIncome);
+  sumExpense.textContent = money.format(summary.totalExpense);
+  sumBalance.textContent = money.format(summary.balance);
+  sumBalance.className = summary.balance >= 0 ? 'income' : 'expense';
+
+  if (expenseChart) {
+    expenseChart.destroy();
+    expenseChart = null;
+  }
+
+  const expenses = summary.byCategory.filter((row) => row.type === 'Expense');
+  chartBox.hidden = expenses.length === 0;
+  chartEmpty.hidden = expenses.length > 0;
+
+  if (expenses.length === 0) {
+    return;
+  }
+  if (typeof Chart === 'undefined') {
+    appMessage.textContent = 'Grafik kütüphanesi yüklenemedi (internet bağlantını kontrol et).';
+    return;
+  }
+
+  expenseChart = new Chart(chartCanvas, {
+    type: 'doughnut',
+    data: {
+      labels: expenses.map((row) => row.name),
+      datasets: [
+        {
+          data: expenses.map((row) => row.total),
+          backgroundColor: expenses.map((_, i) => chartColors[i % chartColors.length]),
+        },
+      ],
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.label}: ${money.format(ctx.parsed)}`,
+          },
+        },
+      },
+    },
+  });
 }
 
 function renderCategories(categories) {
@@ -221,6 +291,15 @@ document.getElementById('transaction-form').addEventListener('submit', async (ev
     event.target.reset();
     dateInput.value = todayLocal();
     await loadData();
+  } catch (err) {
+    appMessage.textContent = err.message;
+  }
+});
+
+summaryMonth.addEventListener('change', async () => {
+  appMessage.textContent = '';
+  try {
+    await loadSummary();
   } catch (err) {
     appMessage.textContent = err.message;
   }
