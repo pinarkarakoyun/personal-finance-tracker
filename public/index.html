@@ -4,9 +4,37 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Personal Finance Tracker</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Personal Finance Tracker</h1>
-  <p>Frontend çalışıyor.</p>
+  <main>
+    <h1>Personal Finance Tracker</h1>
+
+    <section id="auth-section">
+      <form id="login-form">
+        <h2>Giriş yap</h2>
+        <input type="email" id="login-email" placeholder="E-posta" required>
+        <input type="password" id="login-password" placeholder="Şifre" required>
+        <button type="submit">Giriş</button>
+      </form>
+
+      <form id="register-form">
+        <h2>Kayıt ol</h2>
+        <input type="text" id="register-name" placeholder="Ad Soyad" required>
+        <input type="email" id="register-email" placeholder="E-posta" required>
+        <input type="password" id="register-password" placeholder="Şifre (en az 8 karakter)" minlength="8" required>
+        <button type="submit">Kayıt ol</button>
+      </form>
+
+      <p id="auth-message"></p>
+    </section>
+
+    <section id="app-section" hidden>
+      <p>Hoş geldin, <strong id="user-name"></strong></p>
+      <button id="logout-button" type="button">Çıkış</button>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
 </body>
 </html>
