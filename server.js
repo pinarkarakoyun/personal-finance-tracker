@@ -3,9 +3,7 @@ const path = require('path');
 
 const express = require('express');
 const cors = require('cors');
-const { getPool } = require('./db');
 const authRoutes = require('./routes/auth'); 
-const authenticate = require('./middleware/auth');
 const categoryRoutes = require('./routes/categories');
 const transactionRoutes = require('./routes/transactions');
 const summaryRoutes = require('./routes/summary');
@@ -21,23 +19,6 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/summary', summaryRoutes);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
-});
-
-app.get('/api/me', authenticate, (req, res) => {
-  res.json({ userId: req.user.userId });
-});
-
-app.get('/api/db-test', async (req, res) => {
-  try {
-    const pool = await getPool();
-    const result = await pool
-      .request()
-      .query('SELECT COUNT(*) AS userCount FROM Users');
-    res.json({ db: 'connected', userCount: result.recordset[0].userCount });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ db: 'error', message: err.message });
-  }
 });
 
 const PORT = process.env.PORT || 3000;
