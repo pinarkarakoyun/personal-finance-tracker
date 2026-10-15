@@ -13,8 +13,29 @@
   --shadow: 0 1px 3px rgba(16, 24, 40, 0.1);
 }
 
+/* Manual light theme */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* Manual dark theme */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1419;
+  --surface: #1a2028;
+  --text: #e6e9ed;
+  --muted: #9aa5b1;
+  --border: #2b333d;
+  --primary: #3d6fe0;
+  --primary-hover: #5584ea;
+  --income: #4cc38a;
+  --expense: #ff7b72;
+  --shadow: none;
+}
+
+/* No saved choice: follow the operating system */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --bg: #0f1419;
     --surface: #1a2028;
     --text: #e6e9ed;
@@ -27,6 +48,8 @@
     --shadow: none;
   }
 }
+
+[data-accent="slate"]  { --hue: 215; --sat: 14%; --l: 36%; }
 
 * {
   box-sizing: border-box;
@@ -348,5 +371,63 @@ button:disabled {
 @media (max-width: 700px) {
   #filters {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.page-header h1 {
+  margin: 0;
+}
+
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.theme-toggle:hover {
+  background: var(--border);
+}
+
+.theme-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Light theme shows the moon (click = go dark), dark theme shows the sun */
+.theme-toggle .icon-sun {
+  display: none;
+}
+
+:root[data-theme="dark"] .theme-toggle .icon-sun {
+  display: block;
+}
+
+:root[data-theme="dark"] .theme-toggle .icon-moon {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .theme-toggle .icon-sun {
+    display: block;
+  }
+
+  :root:not([data-theme]) .theme-toggle .icon-moon {
+    display: none;
   }
 }

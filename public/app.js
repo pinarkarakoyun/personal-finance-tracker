@@ -46,6 +46,7 @@ const pageNext = document.getElementById('page-next');
 const PAGE_SIZE = 10;
 let currentPage = 1;
 let searchTimer = null;
+const themeToggle = document.getElementById('theme-toggle');
 
 const cssVar = (name) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -79,6 +80,34 @@ function resetTransactionForm() {
   transactionTitle.textContent = 'İşlem ekle';
   transactionSubmit.textContent = 'İşlem ekle';
   transactionCancel.hidden = true;
+}
+
+function refreshChartTheme() {
+  // The chart reads its colors when drawn, so redraw it after a theme change.
+  if (!appSection.hidden) {
+    loadSummary().catch(() => {});
+  }
+}
+
+function currentTheme() {
+  const manual = document.documentElement.getAttribute('data-theme');
+  if (manual) {
+    return manual;
+  }
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light';
+}
+
+function toggleTheme() {
+  const next = currentTheme() === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try {
+    localStorage.setItem('theme-mode', next);
+  } catch (err) {
+    // Storage can be unavailable (private mode); the theme still switches.
+  }
+  refreshChartTheme();
 }
 
 function getToken() {
@@ -455,6 +484,17 @@ pageNext.addEventListener('click', () => {
   currentPage += 1;
   refreshTransactions();
 });
+
+themeToggle.addEventListener('click', toggleTheme);
+
+// While following the system theme, redraw the chart when the OS theme changes.
+window
+  .matchMedia('(prefers-color-scheme: dark)')
+  .addEventListener('change', () => {
+    if (!document.documentElement.hasAttribute('data-theme')) {
+      refreshChartTheme();
+    }
+  });
 
 document.getElementById('logout-button').addEventListener('click', logout);
 
