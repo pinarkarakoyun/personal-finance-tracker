@@ -1,23 +1,11 @@
 const express = require('express');
 const { sql, getPool } = require('../db');
 const authenticate = require('../middleware/auth');
+const { monthRange } = require('../utils/month');
 
 const router = express.Router();
 
 router.use(authenticate);
-
-function monthRange(month) {
-  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
-    return null;
-  }
-  const [year, mon] = month.split('-').map(Number);
-  const nextYear = mon === 12 ? year + 1 : year;
-  const nextMon = mon === 12 ? 1 : mon + 1;
-  return {
-    start: `${month}-01`,
-    end: `${nextYear}-${String(nextMon).padStart(2, '0')}-01`,
-  };
-}
 
 const round2 = (n) => Math.round(n * 100) / 100;
 

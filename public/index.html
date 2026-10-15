@@ -71,7 +71,28 @@
     </form>
 
       <h2>İşlemler</h2>
+
+      <div id="filters">
+        <input type="search" id="filter-q" placeholder="Ara (açıklama veya kategori)">
+        <select id="filter-type">
+          <option value="">Tümü</option>
+          <option value="Income">Gelir</option>
+          <option value="Expense">Gider</option>
+        </select>
+        <select id="filter-category">
+          <option value="">Tüm kategoriler</option>
+        </select>
+        <input type="month" id="filter-month" title="Ay">
+        <button type="button" id="filter-clear" class="secondary">Temizle</button>
+      </div>
+
       <ul id="transaction-list"></ul>
+
+      <div id="pagination" hidden>
+        <button type="button" id="page-prev" class="secondary">Önceki</button>
+        <span id="page-info"></span>
+        <button type="button" id="page-next" class="secondary">Sonraki</button>
+      </div>
     </section>
   </main>
 

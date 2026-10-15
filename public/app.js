@@ -34,6 +34,19 @@ const transactionSubmit = document.getElementById('transaction-submit');
 const transactionCancel = document.getElementById('transaction-cancel');
 
 let editingId = null;
+const filterQ = document.getElementById('filter-q');
+const filterType = document.getElementById('filter-type');
+const filterCategory = document.getElementById('filter-category');
+const filterMonth = document.getElementById('filter-month');
+const pagination = document.getElementById('pagination');
+const pageInfo = document.getElementById('page-info');
+const pagePrev = document.getElementById('page-prev');
+const pageNext = document.getElementById('page-next');
+
+const PAGE_SIZE = 10;
+let currentPage = 1;
+let searchTimer = null;
+
 const cssVar = (name) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
@@ -109,19 +122,60 @@ function logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     resetTransactionForm();
+    filterQ.value = '';
+    filterType.value = '';
+    filterCategory.value = '';
+    filterMonth.value = '';
+    currentPage = 1;  
     showAuth();
 }
 
 async function loadData() {
   appMessage.textContent = '';
   try {
-    const [categories, transactions] = await Promise.all([
+    const [categories] = await Promise.all([
       api('/categories'),
-      api('/transactions'),
+      loadTransactions(),
     ]);
     renderCategories(categories);
-    renderTransactions(transactions);
     await loadSummary();
+  } catch (err) {
+    appMessage.textContent = err.message;
+  }
+}
+
+async function loadTransactions() {
+  const params = new URLSearchParams({ page: currentPage, pageSize: PAGE_SIZE });
+
+  const q = filterQ.value.trim();
+  if (q) params.set('q', q);
+  if (filterType.value) params.set('type', filterType.value);
+  if (filterCategory.value) params.set('categoryId', filterCategory.value);
+  if (filterMonth.value) params.set('month', filterMonth.value);
+
+  const data = await api(`/transactions?${params}`);
+
+  // Deleted the last item on the last page? Go back one page.
+  if (data.items.length === 0 && data.total > 0 && currentPage > 1) {
+    currentPage = data.totalPages;
+    return loadTransactions();
+  }
+
+  renderTransactions(data.items);
+  renderPagination(data);
+}
+
+function renderPagination({ page, totalPages, total }) {
+  pagination.hidden = totalPages <= 1;
+  pageInfo.textContent = `Sayfa ${page} / ${totalPages} (${total} işlem)`;
+  pagePrev.disabled = page <= 1;
+  pageNext.disabled = page >= totalPages;
+}
+
+async function refreshTransactions() {
+  appMessage.textContent = '';
+  try {
+    await loadTransactions();
   } catch (err) {
     appMessage.textContent = err.message;
   }
@@ -198,6 +252,15 @@ function renderCategories(categories) {
     option.textContent = `${category.Name} (${typeLabel[category.Type]})`;
     categorySelect.append(option);
   }
+
+  const selected = filterCategory.value;
+  filterCategory.replaceChildren(new Option('Tüm kategoriler', ''));
+  for (const category of categories) {
+    filterCategory.append(
+      new Option(`${category.Name} (${typeLabel[category.Type]})`, category.CategoryId)
+    );
+  }
+  filterCategory.value = selected;
 }
 
 function renderTransactions(transactions) {
@@ -205,7 +268,7 @@ function renderTransactions(transactions) {
 
   if (transactions.length === 0) {
     const empty = document.createElement('li');
-    empty.textContent = 'Henüz işlem yok.';
+    empty.textContent = 'Kayıt bulunamadı.';
     transactionList.append(empty);
     return;
   }
@@ -359,6 +422,38 @@ summaryMonth.addEventListener('change', async () => {
   } catch (err) {
     appMessage.textContent = err.message;
   }
+});
+
+async function applyFilters() {
+  currentPage = 1;
+  await refreshTransactions();
+}
+
+filterQ.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(applyFilters, 300);
+});
+
+for (const element of [filterType, filterCategory, filterMonth]) {
+  element.addEventListener('change', applyFilters);
+}
+
+document.getElementById('filter-clear').addEventListener('click', () => {
+  filterQ.value = '';
+  filterType.value = '';
+  filterCategory.value = '';
+  filterMonth.value = '';
+  applyFilters();
+});
+
+pagePrev.addEventListener('click', () => {
+  currentPage -= 1;
+  refreshTransactions();
+});
+
+pageNext.addEventListener('click', () => {
+  currentPage += 1;
+  refreshTransactions();
 });
 
 document.getElementById('logout-button').addEventListener('click', logout);

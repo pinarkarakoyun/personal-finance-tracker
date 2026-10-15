@@ -321,3 +321,32 @@ button.secondary {
 button.secondary:hover {
   background: var(--border);
 }
+
+#filters,
+#pagination {
+  grid-column: 1 / -1;
+}
+
+#filters {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.5fr 1fr auto;
+  gap: 8px;
+}
+
+#pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 700px) {
+  #filters {
+    grid-template-columns: 1fr 1fr;
+  }
+}

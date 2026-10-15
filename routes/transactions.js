@@ -1,6 +1,7 @@
 const express = require('express');
 const { sql, getPool } = require('../db');
 const authenticate = require('../middleware/auth');
+const { monthRange } = require('../utils/month');
 
 const router = express.Router();
 
@@ -94,11 +95,85 @@ router.post('/', async (req, res) => {
 });
 
 router.get('/', async (req, res) => {
+  const { type, categoryId, month, q } = req.query;
+
+  const conditions = ['t.UserId = @userId'];
+  const params = [['userId', sql.Int, req.user.userId]];
+
+  if (type !== undefined && type !== '') {
+    if (type !== 'Income' && type !== 'Expense') {
+      return res
+        .status(400)
+        .json({ message: "type must be 'Income' or 'Expense'" });
+    }
+    conditions.push('c.Type = @type');
+    params.push(['type', sql.NVarChar(10), type]);
+  }
+
+  if (categoryId !== undefined && categoryId !== '') {
+    const id = Number(categoryId);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ message: 'categoryId must be an integer' });
+    }
+    conditions.push('t.CategoryId = @categoryId');
+    params.push(['categoryId', sql.Int, id]);
+  }
+
+  if (month !== undefined && month !== '') {
+    const range = monthRange(String(month));
+    if (!range) {
+      return res
+        .status(400)
+        .json({ message: 'month must be in YYYY-MM format' });
+    }
+    conditions.push(
+      't.TransactionDate >= CAST(@start AS DATE) AND t.TransactionDate < CAST(@end AS DATE)'
+    );
+    params.push(['start', sql.VarChar(10), range.start]);
+    params.push(['end', sql.VarChar(10), range.end]);
+  }
+
+  if (typeof q === 'string' && q.trim() !== '') {
+    // Escape LIKE wildcards so "100%" searches for the text "100%".
+    const escaped = q.trim().slice(0, 100).replace(/[\\%_[]/g, '\\$&');
+    conditions.push(
+      "(t.Description LIKE @q ESCAPE '\\' OR c.Name LIKE @q ESCAPE '\\')"
+    );
+    params.push(['q', sql.NVarChar(300), `%${escaped}%`]);
+  }
+
+  const page = Math.min(1000000, Math.max(1, parseInt(req.query.page, 10) || 1));
+  const pageSize = Math.min(
+    50,
+    Math.max(1, parseInt(req.query.pageSize, 10) || 10)
+  );
+
+  const from = `
+    FROM Transactions t
+    JOIN Categories c ON c.CategoryId = t.CategoryId
+    WHERE ${conditions.join(' AND ')}
+  `;
+
   try {
     const pool = await getPool();
-    const result = await pool
-      .request()
-      .input('userId', sql.Int, req.user.userId)
+
+    const makeRequest = () => {
+      const request = pool.request();
+      for (const [name, dataType, value] of params) {
+        request.input(name, dataType, value);
+      }
+      return request;
+    };
+
+    const countResult = await makeRequest().query(
+      `SELECT COUNT(*) AS total ${from}`
+    );
+    const total = countResult.recordset[0].total;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+    const rows = await makeRequest()
+      .input('offset', sql.Int, (page - 1) * pageSize)
+      .input('pageSize', sql.Int, pageSize)
       .query(`
         SELECT t.TransactionId,
                t.CategoryId,
@@ -107,12 +182,12 @@ router.get('/', async (req, res) => {
                t.Amount,
                t.Description,
                CONVERT(VARCHAR(10), t.TransactionDate, 23) AS TransactionDate
-        FROM Transactions t
-        JOIN Categories c ON c.CategoryId = t.CategoryId
-        WHERE t.UserId = @userId
+        ${from}
         ORDER BY t.TransactionDate DESC, t.TransactionId DESC
+        OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
       `);
-    res.json(result.recordset);
+
+    res.json({ items: rows.recordset, total, page, pageSize, totalPages });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
